@@ -183,14 +183,30 @@ class WxVoice extends EventEmitter {
 
 
     duration(filePath, callback) {
+        callback = validateFunction(callback);
+
+        // Try to detect silk format first
+        var buf;
+        try {
+            buf = readChunk.sync(filePath, 0, 4100);
+        } catch (e) {
+            return callback(0);
+        }
+
+        var fmt = fileType(buf);
+        if (fmt && fmt.mime === 'audio/silk') {
+            return callback(this._parseSilkDuration(filePath));
+        }
+
+        // Fallback to ffprobe for other formats
         Ffmpeg.ffprobe(filePath, (err, metadata) => {
             if (err) return callback(0);
 
+            var duration = 0;
             if (metadata && metadata.format) {
-                var duration = parseFloat(metadata.format.duration);
-                duration = (isNaN(duration)) ? 0 : duration;
+                duration = parseFloat(metadata.format.duration);
+                duration = isNaN(duration) ? 0 : duration;
             }
-
             callback(duration);
         });
     }
@@ -373,6 +389,46 @@ class WxVoice extends EventEmitter {
             fileName = this._getTempFile(fileName, true);
             fs.unlink(fileName, () => {});
         }
+    }
+
+
+    _parseSilkDuration(filePath) {
+        var buf, offset, headerLen, frameLen, frameCount;
+
+        try {
+            buf = fs.readFileSync(filePath);
+        } catch (e) {
+            return 0;
+        }
+
+        // Detect header length
+        var b = buf;
+        if (b[0] === 0x23 && b[1] === 0x21 && b[2] === 0x41 && b[3] === 0x4D && b[4] === 0x52) {
+            headerLen = 16; // #!AMR\n.#!SILK_V3
+        } else if (b[0] === 0x02) {
+            headerLen = 10; // \x02#!SILK_V3
+        } else if (b[0] === 0x23 && b[1] === 0x21 && b[2] === 0x53 && b[3] === 0x49 && b[4] === 0x4C && b[5] === 0x4B && b[6] === 0x5F) {
+            headerLen = 9;  // #!SILK_V3
+        } else {
+            headerLen = 7;  // #!SILK\n
+        }
+
+        offset = headerLen;
+        frameCount = 0;
+
+        while (offset + 2 <= buf.length) {
+            frameLen = buf.readInt16LE(offset);
+            offset += 2;
+
+            if (frameLen === -1) break; // end of stream
+
+            if (frameLen < 0 || offset + frameLen > buf.length) break; // corrupt
+
+            offset += frameLen;
+            frameCount++;
+        }
+
+        return frameCount * 0.02;
     }
 }
 
