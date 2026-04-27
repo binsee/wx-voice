@@ -94,7 +94,7 @@ export class WxVoice extends EventEmitter {
 
             if (!fs.existsSync(input)) {
                 const err = new Error(`ENOENT: no such file or directory, open '${input}'`);
-                this.emit('error', err.message);
+                this.emit('error', err);
                 return reject(err);
             }
 
@@ -203,7 +203,7 @@ export class WxVoice extends EventEmitter {
         decoder.stdout.on('data', () => {});
         decoder.stderr.on('data', () => {});
         decoder.on('close', (code) => {
-            code === 1 ? callback() : callback(output);
+            code !== 0 ? callback() : callback(output);
         });
     }
 
@@ -213,7 +213,7 @@ export class WxVoice extends EventEmitter {
         encoder.stdout.on('data', () => {});
         encoder.stderr.on('data', () => {});
         encoder.on('close', (code) => {
-            code === 1 ? callback() : callback(output);
+            code !== 0 ? callback() : callback(output);
         });
     }
 
