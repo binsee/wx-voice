@@ -1,7 +1,7 @@
 /*
     [wx-voice]
     Convert audio files between Tencent apps (Weixin / Wechat, QQ) and Silk codec with other general format such as MP3 and M4A
-    
+
     Github: https://github.com/Ang-YC/wx-voice
     Author: AngYC <me@angyc.com>
 */
@@ -9,21 +9,17 @@
 'use strict';
 
 const EventEmitter = require('events');
-const { spawn } = require('child_process');
-const Ffmpeg = require('fluent-ffmpeg');
-const ffmpegInstaller  = require('@ffmpeg-installer/ffmpeg');
-const ffprobeInstaller = require('@ffprobe-installer/ffprobe');
-
-Ffmpeg.setFfmpegPath(ffmpegInstaller.path);
-Ffmpeg.setFfprobePath(ffprobeInstaller.path);
+const { spawn, execFile } = require('child_process');
 
 const os = require('os');
 const fs = require('fs');
 const path = require('path');
-const which = require('which');
 const dataUri = require('strong-data-uri');
 const readChunk = require('read-chunk');
 const randomatic = require('randomatic');
+
+const ffmpegPath  = require('@ffmpeg-installer/ffmpeg').path;
+const ffprobePath = require('@ffprobe-installer/ffprobe').path;
 
 
 
@@ -199,75 +195,66 @@ class WxVoice extends EventEmitter {
         }
 
         // Fallback to ffprobe for other formats
-        Ffmpeg.ffprobe(filePath, (err, metadata) => {
+        var args = ["-v", "quiet", "-print_format", "json", "-show_format", filePath];
+        execFile(ffprobePath, args, (err, stdout) => {
             if (err) return callback(0);
 
             var duration = 0;
-            if (metadata && metadata.format) {
-                duration = parseFloat(metadata.format.duration);
-                duration = isNaN(duration) ? 0 : duration;
-            }
+            try {
+                var meta = JSON.parse(stdout);
+                if (meta && meta.format && meta.format.duration) {
+                    duration = parseFloat(meta.format.duration);
+                    duration = isNaN(duration) ? 0 : duration;
+                }
+            } catch (e) { }
+
             callback(duration);
         });
     }
 
 
     _convert(rawInput, rawOutput, input, output, options, callback) {
-
-        var started   = false,
-            format    = options.format,
+        var format    = options.format,
             bitrate   = options.bitrate,
             frequency = options.frequency,
-            channels  = options.channels,
-            ffmpeg = Ffmpeg(input)
-                .on("start", onStart)
-                .on("error", onError)
-                .on("end", onEnd);
+            channels  = options.channels;
 
-        // Additional parameters for raw
+        var inputArgs  = [];
+        var outputArgs = [];
+
+        // Additional parameters for raw input/output
         if (rawInput) {
-            ffmpeg = ffmpeg.inputFormat("s16le").inputOptions(["-ar 24000", "-ac 1"]);
+            inputArgs = ["-f", "s16le", "-ar", "24000", "-ac", "1"];
         } else if (rawOutput) {
             if (format == "silk" || format == "silk_amr") {
                 format = "s16le";
-                ffmpeg = ffmpeg.outputOptions(["-ar 24000", "-ac 1"]);
+                outputArgs = outputArgs.concat(["-ar", "24000", "-ac", "1"]);
             } else if (format == "webm") {
-                ffmpeg = ffmpeg.outputOptions(["-ar 48000", "-ac 1"]).audioCodec("opus");
+                outputArgs = outputArgs.concat(["-ar", "48000", "-ac", "1", "-acodec", "opus"]);
             }
         }
 
         // Other settings
-        if (bitrate)   { ffmpeg = ffmpeg.audioBitrate(bitrate); }
-        if (frequency) { ffmpeg = ffmpeg.audioFrequency(frequency); }
-        if (channels)  { ffmpeg = ffmpeg.audioChannels(channels); }
+        if (bitrate)   { outputArgs = outputArgs.concat(["-ab", bitrate + "k"]); }
+        if (frequency) { outputArgs = outputArgs.concat(["-ar", String(frequency)]); }
+        if (channels)  { outputArgs = outputArgs.concat(["-ac", String(channels)]); }
 
         // Format dependent
         if (format == "m4a") {
-            ffmpeg = ffmpeg.audioCodec("aac");
+            outputArgs = outputArgs.concat(["-acodec", "aac", "-f", "mp4"]);
         } else if (format == "pcm") {
-            ffmpeg = ffmpeg.format("s16le");
+            outputArgs = outputArgs.concat(["-f", "s16le"]);
         } else {
-            ffmpeg = ffmpeg.format(format);
+            outputArgs = outputArgs.concat(["-f", format]);
         }
 
-        // Output
-        ffmpeg.noVideo().save(output);
+        // Build full args: [inputArgs...] -i input [outputArgs...] -vn output -y
+        var args = inputArgs.concat(["-i", input], outputArgs, ["-vn", output, "-y"]);
 
-        function onStart(commandLine) {
-            started = true;
-        }
-
-        function onError(err, stdout, stderr) {
-            started = false;
-            callback();
-        }
-
-        function onEnd(stdout, stderr) {
-            if (started) {
-                started = false;
-                callback(output);
-            }
-        }
+        execFile(ffmpegPath, args, (err) => {
+            if (err) return callback();
+            callback(output);
+        });
     }
 
 
