@@ -278,13 +278,19 @@ export class WxVoice extends EventEmitter {
     }
 
     private _parseSilkDuration(filePath: string): number {
+        const CHUNK_SIZE = 256 * 1024;
         const fd = fs.openSync(filePath, 'r');
         try {
-            const fileSize  = fs.fstatSync(fd).size;
-            const headerBuf = Buffer.alloc(16);
-            if (fs.readSync(fd, headerBuf, 0, 16, 0) < 2) return 0;
+            const fileSize = fs.fstatSync(fd).size;
+            if (fileSize < 2) return 0;
 
-            const b = headerBuf;
+            const chunk = Buffer.allocUnsafe(CHUNK_SIZE);
+            let chunkStart = 0;
+            let chunkLen   = fs.readSync(fd, chunk, 0, CHUNK_SIZE, 0);
+            if (chunkLen < 2) return 0;
+
+            // Detect header length from first chunk
+            const b = chunk;
             let headerLen: number;
             if (b[0] === 0x23 && b[1] === 0x21 && b[2] === 0x41 && b[3] === 0x4D && b[4] === 0x52) {
                 headerLen = 16; // #!AMR\n.#!SILK_V3
@@ -296,19 +302,27 @@ export class WxVoice extends EventEmitter {
                 headerLen = 7;  // #!SILK\n
             }
 
-            const lenBuf = Buffer.alloc(2);
-            let offset     = headerLen;
+            let fileOffset = headerLen;
             let frameCount = 0;
 
-            while (offset + 2 <= fileSize) {
-                if (fs.readSync(fd, lenBuf, 0, 2, offset) < 2) break;
-                const frameLen = lenBuf.readInt16LE(0);
-                offset += 2;
+            while (fileOffset + 2 <= fileSize) {
+                let posInChunk = fileOffset - chunkStart;
 
-                if (frameLen === -1) break;                              // end of stream
-                if (frameLen < 0 || offset + frameLen > fileSize) break; // corrupt
+                // Reload chunk only when the 2-byte frame header is outside current chunk
+                if (posInChunk + 2 > chunkLen) {
+                    chunkStart = fileOffset;
+                    chunkLen   = fs.readSync(fd, chunk, 0, CHUNK_SIZE, fileOffset);
+                    if (chunkLen < 2) break;
+                    posInChunk = 0;
+                }
 
-                offset += frameLen; // skip frame body, no read needed
+                const frameLen = chunk.readInt16LE(posInChunk);
+                fileOffset += 2;
+
+                if (frameLen === -1) break;                               // end of stream
+                if (frameLen < 0 || fileOffset + frameLen > fileSize) break; // corrupt
+
+                fileOffset += frameLen; // skip frame body, no read needed
                 frameCount++;
             }
 
