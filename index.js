@@ -228,24 +228,24 @@ class WxVoice extends EventEmitter {
         } else if (rawOutput) {
             if (format == "silk" || format == "silk_amr") {
                 format = "s16le";
-                outputArgs = outputArgs.concat(["-ar", "24000", "-ac", "1"]);
+                outputArgs.push("-ar", "24000", "-ac", "1");
             } else if (format == "webm") {
-                outputArgs = outputArgs.concat(["-ar", "48000", "-ac", "1", "-acodec", "opus"]);
+                outputArgs.push("-ar", "48000", "-ac", "1", "-acodec", "opus");
             }
         }
 
         // Other settings
-        if (bitrate)   { outputArgs = outputArgs.concat(["-ab", bitrate + "k"]); }
-        if (frequency) { outputArgs = outputArgs.concat(["-ar", String(frequency)]); }
-        if (channels)  { outputArgs = outputArgs.concat(["-ac", String(channels)]); }
+        if (bitrate)   { outputArgs.push("-ab", bitrate + "k"); }
+        if (frequency) { outputArgs.push("-ar", String(frequency)); }
+        if (channels)  { outputArgs.push("-ac", String(channels)); }
 
         // Format dependent
         if (format == "m4a") {
-            outputArgs = outputArgs.concat(["-acodec", "aac", "-f", "mp4"]);
+            outputArgs.push("-acodec", "aac", "-f", "mp4");
         } else if (format == "pcm") {
-            outputArgs = outputArgs.concat(["-f", "s16le"]);
+            outputArgs.push("-f", "s16le");
         } else {
-            outputArgs = outputArgs.concat(["-f", format]);
+            outputArgs.push("-f", format);
         }
 
         // Build full args: [inputArgs...] -i input [outputArgs...] -vn output -y
