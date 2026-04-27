@@ -16,12 +16,17 @@
     "encode",
     "encoder"
   ],
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "homepage": "https://github.com/Ang-YC/wx-voice",
   "license": "MIT",
   "author": "AngYC <me@angyc.com> (https://angyc.com/)",
   "bin": {
-    "wx-voice": "./bin.js"
+    "wx-voice": "./dist/bin.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepare": "tsc"
   },
   "repository": {
     "type": "git",
@@ -35,5 +40,12 @@
     "randomatic": "^1.1.7",
     "read-chunk": "^2.1.0",
     "strong-data-uri": "^1.0.4"
+  },
+  "devDependencies": {
+    "@types/command-line-args": "^5.2.3",
+    "@types/node": "^25.6.0",
+    "@types/randomatic": "^3.1.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
   }
 }
