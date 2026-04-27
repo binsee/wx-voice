@@ -191,7 +191,7 @@ class WxVoice extends EventEmitter {
 
         var fmt = fileType(buf);
         if (fmt && fmt.mime === 'audio/silk') {
-            return callback(this._parseSilkDuration(filePath));
+            return this._parseSilkDuration(filePath, callback);
         }
 
         // Fallback to ffprobe for other formats
@@ -379,43 +379,57 @@ class WxVoice extends EventEmitter {
     }
 
 
-    _parseSilkDuration(filePath) {
-        var buf, offset, headerLen, frameLen, frameCount;
+    _parseSilkDuration(filePath, callback) {
+        var headerBuf = Buffer.alloc(16);
 
-        try {
-            buf = fs.readFileSync(filePath);
-        } catch (e) {
-            return 0;
-        }
+        fs.open(filePath, 'r', (err, fd) => {
+            if (err) return callback(0);
 
-        // Detect header length
-        var b = buf;
-        if (b[0] === 0x23 && b[1] === 0x21 && b[2] === 0x41 && b[3] === 0x4D && b[4] === 0x52) {
-            headerLen = 16; // #!AMR\n.#!SILK_V3
-        } else if (b[0] === 0x02) {
-            headerLen = 10; // \x02#!SILK_V3
-        } else if (b[0] === 0x23 && b[1] === 0x21 && b[2] === 0x53 && b[3] === 0x49 && b[4] === 0x4C && b[5] === 0x4B && b[6] === 0x5F) {
-            headerLen = 9;  // #!SILK_V3
-        } else {
-            headerLen = 7;  // #!SILK\n
-        }
+            // Read first 16 bytes to detect header length
+            fs.read(fd, headerBuf, 0, 16, 0, (err, bytesRead) => {
+                if (err || bytesRead < 1) {
+                    fs.close(fd, () => {});
+                    return callback(0);
+                }
 
-        offset = headerLen;
-        frameCount = 0;
+                var b = headerBuf, headerLen;
+                if (b[0] === 0x23 && b[1] === 0x21 && b[2] === 0x41 && b[3] === 0x4D && b[4] === 0x52) {
+                    headerLen = 16; // #!AMR\n.#!SILK_V3
+                } else if (b[0] === 0x02) {
+                    headerLen = 10; // \x02#!SILK_V3
+                } else if (b[0] === 0x23 && b[1] === 0x21 && b[2] === 0x53 && b[3] === 0x49 && b[4] === 0x4C && b[5] === 0x4B && b[6] === 0x5F) {
+                    headerLen = 9;  // #!SILK_V3
+                } else {
+                    headerLen = 7;  // #!SILK\n
+                }
 
-        while (offset + 2 <= buf.length) {
-            frameLen = buf.readInt16LE(offset);
-            offset += 2;
+                var frameBuf   = Buffer.alloc(2),
+                    frameCount = 0,
+                    offset     = headerLen;
 
-            if (frameLen === -1) break; // end of stream
+                function readNextFrame() {
+                    fs.read(fd, frameBuf, 0, 2, offset, (err, bytesRead) => {
+                        if (err || bytesRead < 2) {
+                            fs.close(fd, () => {});
+                            return callback(frameCount * 0.02);
+                        }
 
-            if (frameLen < 0 || offset + frameLen > buf.length) break; // corrupt
+                        var frameLen = frameBuf.readInt16LE(0);
 
-            offset += frameLen;
-            frameCount++;
-        }
+                        if (frameLen === -1 || frameLen < 0) { // end of stream or corrupt
+                            fs.close(fd, () => {});
+                            return callback(frameCount * 0.02);
+                        }
 
-        return frameCount * 0.02;
+                        offset += 2 + frameLen;
+                        frameCount++;
+                        readNextFrame();
+                    });
+                }
+
+                readNextFrame();
+            });
+        });
     }
 }
 
