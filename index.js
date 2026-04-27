@@ -11,6 +11,11 @@
 const EventEmitter = require('events');
 const { spawn } = require('child_process');
 const Ffmpeg = require('fluent-ffmpeg');
+const ffmpegInstaller  = require('@ffmpeg-installer/ffmpeg');
+const ffprobeInstaller = require('@ffprobe-installer/ffprobe');
+
+Ffmpeg.setFfmpegPath(ffmpegInstaller.path);
+Ffmpeg.setFfprobePath(ffprobeInstaller.path);
 
 const os = require('os');
 const fs = require('fs');
@@ -24,13 +29,9 @@ const randomatic = require('randomatic');
 
 class WxVoice extends EventEmitter {
 
-    constructor(tempDir = os.tmpdir(), ffmpegPath) {
+    constructor(tempDir = os.tmpdir()) {
         super();
-
-        this._tempDir    = path.resolve(tempDir);
-        this._ffmpegPath = ffmpegPath;
-
-        // Check if dependencies are available
+        this._tempDir = path.resolve(tempDir);
         this._checkDependencies();
     }
 
@@ -343,48 +344,17 @@ class WxVoice extends EventEmitter {
 
 
     _checkDependencies() {
-        var silkDecoder  = this._getSilkSDK("decoder"),
-            silkEncoder  = this._getSilkSDK("encoder"),
-            ffmpegPath   = this._ffmpegPath;
+        var silkDecoder = this._getSilkSDK("decoder"),
+            silkEncoder = this._getSilkSDK("encoder");
 
-        // Check if Silk SDK is available
         if (!fs.existsSync(silkDecoder) || !fs.existsSync(silkEncoder)) {
             throw new Error("Silk SDK not found, make sure you compiled using command: wx-voice compile");
-        }
-
-        if (ffmpegPath && fs.existsSync(ffmpegPath)) {
-            this._ffmpegPath = path.resolve(ffmpegPath);
-            Ffmpeg.setFfmpegPath(this._ffmpegPath);
-
-        } else if (ffmpegPath = this._getFfmpegPath()) {
-            this._ffmpegPath = path.resolve(ffmpegPath);
-
-        } else {
-            throw new Error("FFMPEG not found");
         }
     }
 
 
     _getSilkSDK(type) {
         return path.resolve(__dirname, "silk", type);
-    }
-
-
-    _getFfmpegPath() {
-        // Get FFMPEG Path (Sync version of _getFfmpegPath in fluent-ffmpeg)
-        var path;
-
-        // Search in FFMPEG_PATH
-        if (process.env.FFMPEG_PATH && fs.existsSync(process.env.FFMPEG_PATH)) {
-            path = process.env.FFMPEG_PATH;
-        // Search in PATH, return null if not found
-        } else {
-            path = which.sync("ffmpeg", { nothrow: true });
-        }
-
-        // Return undefined
-        if (path === null || path === "") path = undefined;
-        return path;
     }
 
 
