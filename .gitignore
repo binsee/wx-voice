@@ -73,3 +73,5 @@ typings/
 .env
 .gitnexus
 dist/
+tmp/
+.claude/
