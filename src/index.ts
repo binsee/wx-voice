@@ -272,8 +272,7 @@ export class WxVoice extends EventEmitter {
 
     private _deleteTempFile(fileName?: string): void {
         if (fileName) {
-            const f = this._getTempFile(fileName, true);
-            fs.unlink(f, () => {});
+            fs.unlink(fileName, () => {});
         }
     }
 
