@@ -135,7 +135,7 @@ export class WxVoice extends EventEmitter {
 
             const fmt = fileType(buf);
             if (fmt && fmt.mime === 'audio/silk') {
-                return this._parseSilkDuration(filePath, resolve);
+                return resolve(this._parseSilkDuration(filePath));
             }
 
             const args = ['-v', 'quiet', '-print_format', 'json', '-show_format', filePath];
@@ -277,51 +277,45 @@ export class WxVoice extends EventEmitter {
         }
     }
 
-    private _parseSilkDuration(filePath: string, callback: (duration: number) => void): void {
-        const headerBuf = Buffer.alloc(16);
-        fs.open(filePath, 'r', (err, fd) => {
-            if (err) return callback(0);
-            fs.read(fd, headerBuf, 0, 16, 0, (err, bytesRead) => {
-                if (err || bytesRead < 1) {
-                    fs.close(fd, () => {});
-                    return callback(0);
-                }
-                const b = headerBuf;
-                let headerLen: number;
-                if (b[0] === 0x23 && b[1] === 0x21 && b[2] === 0x41 && b[3] === 0x4D && b[4] === 0x52) {
-                    headerLen = 16;
-                } else if (b[0] === 0x02) {
-                    headerLen = 10;
-                } else if (b[0] === 0x23 && b[1] === 0x21 && b[2] === 0x53 && b[3] === 0x49 && b[4] === 0x4C && b[5] === 0x4B && b[6] === 0x5F) {
-                    headerLen = 9;
-                } else {
-                    headerLen = 7;
-                }
+    private _parseSilkDuration(filePath: string): number {
+        const fd = fs.openSync(filePath, 'r');
+        try {
+            const fileSize  = fs.fstatSync(fd).size;
+            const headerBuf = Buffer.alloc(16);
+            if (fs.readSync(fd, headerBuf, 0, 16, 0) < 2) return 0;
 
-                const frameBuf = Buffer.alloc(2);
-                let frameCount = 0;
-                let offset     = headerLen;
+            const b = headerBuf;
+            let headerLen: number;
+            if (b[0] === 0x23 && b[1] === 0x21 && b[2] === 0x41 && b[3] === 0x4D && b[4] === 0x52) {
+                headerLen = 16; // #!AMR\n.#!SILK_V3
+            } else if (b[0] === 0x02) {
+                headerLen = 10; // \x02#!SILK_V3
+            } else if (b[0] === 0x23 && b[1] === 0x21 && b[2] === 0x53 && b[3] === 0x49 && b[4] === 0x4C && b[5] === 0x4B && b[6] === 0x5F) {
+                headerLen = 9;  // #!SILK_V3
+            } else {
+                headerLen = 7;  // #!SILK\n
+            }
 
-                const readNextFrame = (): void => {
-                    fs.read(fd, frameBuf, 0, 2, offset, (err, bytesRead) => {
-                        if (err || bytesRead < 2) {
-                            fs.close(fd, () => {});
-                            return callback(frameCount * 0.02);
-                        }
-                        const frameLen = frameBuf.readInt16LE(0);
-                        if (frameLen === -1 || frameLen < 0) {
-                            fs.close(fd, () => {});
-                            return callback(frameCount * 0.02);
-                        }
-                        offset += 2 + frameLen;
-                        frameCount++;
-                        readNextFrame();
-                    });
-                };
+            const lenBuf = Buffer.alloc(2);
+            let offset     = headerLen;
+            let frameCount = 0;
 
-                readNextFrame();
-            });
-        });
+            while (offset + 2 <= fileSize) {
+                if (fs.readSync(fd, lenBuf, 0, 2, offset) < 2) break;
+                const frameLen = lenBuf.readInt16LE(0);
+                offset += 2;
+
+                if (frameLen === -1) break;                              // end of stream
+                if (frameLen < 0 || offset + frameLen > fileSize) break; // corrupt
+
+                offset += frameLen; // skip frame body, no read needed
+                frameCount++;
+            }
+
+            return frameCount * 0.02;
+        } finally {
+            fs.closeSync(fd);
+        }
     }
 }
 
