@@ -30,7 +30,7 @@ npm install wx-voice --save
 
 ## 必须先安装的依赖
 
-- **FFmpeg**: [安装 FFmpeg](#安装-ffmpeg)
+FFmpeg 通过 [`@ffmpeg-installer/ffmpeg`](https://www.npmjs.com/package/@ffmpeg-installer/ffmpeg) 和 [`@ffprobe-installer/ffprobe`](https://www.npmjs.com/package/@ffprobe-installer/ffprobe) 自动处理，无需手动安装。
 
 ---
 
@@ -52,6 +52,7 @@ $ wx-voice encode -i input.mp3 -o output.silk -f silk
 Command:
   decode    解码 silk 或 webm 至其他格式
   encode    编码其他格式至 silk 或 webm
+  duration  获取音频文件时长
 
 Options:
   -i <input>    输入的音频文件路径
@@ -70,12 +71,23 @@ Options:
 const WxVoice = require('wx-voice');
 const voice = new WxVoice();
 
+// 错误处理
 voice.on('error', (err) => console.log(err));
 
 // 解码 silk 至 MP3
 voice.decode('input.silk', 'output.mp3', { format: 'mp3' })
     .then((file) => console.log(file));
 // 输出: "/path/to/output.mp3"
+
+// 编码 MP3 至 silk
+voice.encode('input.mp3', 'output.silk', { format: 'silk' })
+    .then((file) => console.log(file));
+// 输出: "/path/to/output.silk"
+
+// 获取 silk 文件时长
+voice.duration('input.silk')
+    .then((seconds) => console.log(seconds));
+// 输出: 10.24
 ```
 
 ## API
@@ -86,23 +98,52 @@ voice.decode('input.silk', 'output.mp3', { format: 'mp3' })
 | ---------- | ---- |
 | tempFolder | 临时文件目录，默认为系统临时目录 |
 
+如果 Silk SDK 二进制文件未找到（不支持的平台且未本地编译），构造函数会抛出错误。
+
 ### decode(input, output, [options])
-解码音频至通用格式，返回 `Promise<string>`。
+
+将 Silk/WebM 音频文件解码为通用格式（mp3、m4a、wav、pcm 等）。
+
+返回 `Promise<string>`，成功时 resolve 为输出文件路径。
+
+```js
+voice.decode('input.silk', 'output.mp3')
+voice.decode('input.silk', 'output.pcm', { format: 'pcm', frequency: 16000 })
+```
 
 ### encode(input, output, [options])
-编码音频至 silk/webm 格式，返回 `Promise<string>`。
+
+将通用音频文件编码为 Silk 或 WebM 格式。
+
+返回 `Promise<string>`，成功时 resolve 为输出文件路径。
+
+```js
+voice.encode('input.mp3', 'output.silk', { format: 'silk' })
+voice.encode('input.mp3', 'output.silk', { format: 'silk_amr' })  // AMR 兼容头
+voice.encode('input.mp3', 'output.webm', { format: 'webm' })      // base64 data URI
+```
 
 ### duration(filePath)
-获取音频时长（秒），返回 `Promise<number>`。
+
+获取音频文件时长（秒）。
+
+- Silk 文件：直接解析二进制帧结构（无需 FFmpeg）
+- 其他格式：使用 FFprobe
+
+返回 `Promise<number>`，文件无法读取时 resolve 为 `0`。
+
+```js
+voice.duration('input.silk').then((s) => console.log(s + 's'))
+```
 
 ### Options
 
 | 参数      | 说明 |
 | --------- | ---- |
-| format    | 输出格式（silk、webm、mp3、m4a 等），默认从输出文件扩展名解析 |
-| bitrate   | 比特率，单位 bps |
-| frequency | 采样率，单位 Hz |
-| channels  | 声道数，默认 1 |
+| format    | 输出格式（`silk`、`silk_amr`、`webm`、`mp3`、`m4a`、`wav`、`pcm` 等），默认从输出文件扩展名解析 |
+| bitrate   | 比特率，单位 kbps |
+| frequency | 采样率，单位 Hz（如 `16000`、`24000`、`44100`） |
+| channels  | 声道数，默认 `1` |
 
 ---
 
@@ -113,14 +154,17 @@ voice.decode('input.silk', 'output.mp3', { format: 'mp3' })
 
 ---
 
-## 安装 FFmpeg
+## 不支持的平台
 
-| 系统    | 命令 |
-| ------- | ---- |
-| Ubuntu  | `sudo apt-get install ffmpeg` |
-| CentOS  | `sudo yum install ffmpeg` |
-| macOS   | `brew install ffmpeg` |
-| Windows | [从 ffmpeg.org 下载](https://ffmpeg.org/download.html) |
+如果你的平台不在支持列表中，可以本地编译 Silk SDK：
+
+```bash
+git clone https://github.com/binsee/wx-voice.git
+cd wx-voice
+make -C silk
+```
+
+库会自动检测并使用本地编译的 `silk/encoder` 和 `silk/decoder` 二进制文件。
 
 ---
 

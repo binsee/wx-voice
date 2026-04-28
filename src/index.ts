@@ -10,10 +10,17 @@ import randomatic = require('randomatic');
 const ffmpegPath  = require('@ffmpeg-installer/ffmpeg').path as string;
 const ffprobePath = require('@ffprobe-installer/ffprobe').path as string;
 
+/**
+ * Options for audio conversion.
+ */
 export interface ConvertOptions {
+    /** Output format (e.g. 'silk', 'silk_amr', 'webm', 'mp3', 'm4a', 'wav', 'pcm'). Defaults to the output file extension. */
     format?: string;
+    /** Bitrate in kbps. */
     bitrate?: number;
+    /** Sample rate in Hz (e.g. 16000, 24000, 44100). */
     frequency?: number;
+    /** Number of audio channels. Defaults to 1. */
     channels?: number;
 }
 
@@ -22,16 +29,49 @@ interface FileTypeResult {
     mime: string;
 }
 
+/**
+ * WxVoice — converts audio between Silk codec (WeChat/QQ) and common formats.
+ *
+ * Emits an `'error'` event on non-fatal errors.
+ *
+ * @example
+ * ```js
+ * const voice = new WxVoice();
+ * voice.on('error', console.error);
+ * await voice.decode('input.silk', 'output.mp3');
+ * ```
+ */
 export class WxVoice extends EventEmitter {
 
     private _tempDir: string;
 
+    /**
+     * @param tempDir Directory for temporary files. Defaults to the OS temp directory.
+     * @throws If Silk SDK binaries are not found for the current platform.
+     */
     constructor(tempDir: string = os.tmpdir()) {
         super();
         this._tempDir = path.resolve(tempDir);
         this._checkDependencies();
     }
 
+    /**
+     * Decode a Silk or WebM audio file to a general format.
+     *
+     * Silk files are decoded via the Silk SDK; WebM base64 data URIs are unwrapped first.
+     * The output format is inferred from the file extension if not specified in options.
+     *
+     * @param input  Path to the input file (Silk, WebM data URI, or other format).
+     * @param output Path to the output file.
+     * @param options Conversion options.
+     * @returns Resolves with the output file path on success.
+     *
+     * @example
+     * ```js
+     * await voice.decode('input.silk', 'output.mp3');
+     * await voice.decode('input.silk', 'output.pcm', { format: 'pcm', frequency: 16000 });
+     * ```
+     */
     decode(input: string, output: string, options: ConvertOptions = {}): Promise<string> {
         return new Promise((resolve, reject) => {
             input  = path.resolve(input);
@@ -82,6 +122,25 @@ export class WxVoice extends EventEmitter {
         });
     }
 
+    /**
+     * Encode a general audio file to Silk or WebM format.
+     *
+     * - `silk` / `silk_amr`: converts to PCM first, then encodes with the Silk SDK.
+     *   `silk_amr` adds an AMR-compatible header for broader compatibility.
+     * - `webm`: encodes with FFmpeg (Opus codec) and wraps the result as a base64 data URI.
+     *
+     * @param input  Path to the input audio file.
+     * @param output Path to the output file.
+     * @param options Conversion options. `format` must be `'silk'`, `'silk_amr'`, or `'webm'`.
+     * @returns Resolves with the output file path on success.
+     *
+     * @example
+     * ```js
+     * await voice.encode('input.mp3', 'output.silk', { format: 'silk' });
+     * await voice.encode('input.mp3', 'output.silk', { format: 'silk_amr' });
+     * await voice.encode('input.mp3', 'output.webm', { format: 'webm' });
+     * ```
+     */
     encode(input: string, output: string, options: ConvertOptions = {}): Promise<string> {
         return new Promise((resolve, reject) => {
             input  = path.resolve(input);
@@ -124,6 +183,21 @@ export class WxVoice extends EventEmitter {
         });
     }
 
+    /**
+     * Get the duration of an audio file in seconds.
+     *
+     * - For Silk files: parsed directly from the binary frame structure (fast, no FFmpeg needed).
+     * - For other formats: uses FFprobe.
+     *
+     * @param filePath Path to the audio file.
+     * @returns Resolves with duration in seconds, or `0` if the file cannot be read or parsed.
+     *
+     * @example
+     * ```js
+     * const seconds = await voice.duration('input.silk');
+     * console.log(seconds.toFixed(2) + 's');
+     * ```
+     */
     duration(filePath: string): Promise<number> {
         return new Promise((resolve) => {
             let buf: Buffer;

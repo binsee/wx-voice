@@ -30,7 +30,7 @@ No additional compilation step required. Pre-compiled Silk SDK binaries are auto
 
 ## Prerequisites
 
-- **FFmpeg**: [Installing ffmpeg](#installing-ffmpeg)
+FFmpeg is bundled automatically via [`@ffmpeg-installer/ffmpeg`](https://www.npmjs.com/package/@ffmpeg-installer/ffmpeg) and [`@ffprobe-installer/ffprobe`](https://www.npmjs.com/package/@ffprobe-installer/ffprobe). No manual FFmpeg installation is required.
 
 ---
 
@@ -52,6 +52,7 @@ $ wx-voice encode -i input.mp3 -o output.silk -f silk
 Command:
   decode    decode to general audio format
   encode    encode from general audio format
+  duration  get duration of audio file
 
 Options:
   -i <input>    input file path
@@ -70,12 +71,23 @@ Options:
 const WxVoice = require('wx-voice');
 const voice = new WxVoice();
 
+// Error handler
 voice.on('error', (err) => console.log(err));
 
 // Decode silk to MP3
 voice.decode('input.silk', 'output.mp3', { format: 'mp3' })
     .then((file) => console.log(file));
 // Output: "/path/to/output.mp3"
+
+// Encode MP3 to silk
+voice.encode('input.mp3', 'output.silk', { format: 'silk' })
+    .then((file) => console.log(file));
+// Output: "/path/to/output.silk"
+
+// Get duration of a silk file
+voice.duration('input.silk')
+    .then((seconds) => console.log(seconds));
+// Output: 10.24
 ```
 
 ## API
@@ -86,23 +98,52 @@ voice.decode('input.silk', 'output.mp3', { format: 'mp3' })
 | ---------- | ----------- |
 | tempFolder | Folder for temporary files, defaults to system temp |
 
+Throws if Silk SDK binaries are not found (unsupported platform without local build).
+
 ### decode(input, output, [options])
-Decode audio to general formats. Returns `Promise<string>`.
+
+Decode a Silk/WebM audio file to a general format (mp3, m4a, wav, pcm, etc.).
+
+Returns `Promise<string>` — resolves with the output file path on success.
+
+```js
+voice.decode('input.silk', 'output.mp3')
+voice.decode('input.silk', 'output.pcm', { format: 'pcm', frequency: 16000 })
+```
 
 ### encode(input, output, [options])
-Encode audio to silk/webm format. Returns `Promise<string>`.
+
+Encode a general audio file to Silk or WebM format.
+
+Returns `Promise<string>` — resolves with the output file path on success.
+
+```js
+voice.encode('input.mp3', 'output.silk', { format: 'silk' })
+voice.encode('input.mp3', 'output.silk', { format: 'silk_amr' })  // AMR-compatible header
+voice.encode('input.mp3', 'output.webm', { format: 'webm' })      // base64 data URI
+```
 
 ### duration(filePath)
-Get duration of audio file in seconds. Returns `Promise<number>`.
+
+Get the duration of an audio file in seconds.
+
+- For Silk files: parsed directly from the binary frame structure (no FFmpeg needed)
+- For other formats: uses FFprobe
+
+Returns `Promise<number>` — resolves with `0` if the file cannot be read.
+
+```js
+voice.duration('input.silk').then((s) => console.log(s + 's'))
+```
 
 ### Options
 
 | Parameter | Description |
 | --------- | ----------- |
-| format    | Format (silk, webm, mp3, m4a...), default parsed from output extension |
-| bitrate   | Bitrate in bps |
-| frequency | Frequency in Hz |
-| channels  | Channels, default 1 |
+| format    | Output format (`silk`, `silk_amr`, `webm`, `mp3`, `m4a`, `wav`, `pcm`...), default parsed from output file extension |
+| bitrate   | Bitrate in kbps |
+| frequency | Sample rate in Hz (e.g. `16000`, `24000`, `44100`) |
+| channels  | Number of channels, default `1` |
 
 ---
 
@@ -113,14 +154,17 @@ Get duration of audio file in seconds. Returns `Promise<number>`.
 
 ---
 
-## Installing ffmpeg
+## Unsupported platform
 
-| OS      | Command |
-| ------- | ------- |
-| Ubuntu  | `sudo apt-get install ffmpeg` |
-| CentOS  | `sudo yum install ffmpeg` |
-| macOS   | `brew install ffmpeg` |
-| Windows | [Download from ffmpeg.org](https://ffmpeg.org/download.html) |
+If your platform is not in the supported list, you can build the Silk SDK locally:
+
+```bash
+git clone https://github.com/binsee/wx-voice.git
+cd wx-voice
+make -C silk
+```
+
+The library will automatically detect and use the locally compiled binaries at `silk/encoder` and `silk/decoder`.
 
 ---
 

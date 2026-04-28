@@ -22,12 +22,4 @@ declare module 'cli-spinner' {
     }
 }
 
-declare module '@ffmpeg-installer/ffmpeg' {
-    const installer: { path: string; version: string };
-    export = installer;
-}
-
-declare module '@ffprobe-installer/ffprobe' {
-    const installer: { path: string; version: string };
-    export = installer;
-}
+// @ffmpeg-installer/ffmpeg and @ffprobe-installer/ffprobe ship their own .d.ts files
