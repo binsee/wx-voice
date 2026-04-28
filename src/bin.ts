@@ -29,6 +29,10 @@ switch (args.command) {
         convert(args.command, args);
         break;
 
+    case 'duration':
+        getDuration(args);
+        break;
+
     case 'compile':
         execCmd(args.command + '-1', 'make -C ' + binSdk, () => {
             if (!fs.existsSync(sdk)) return;
@@ -45,6 +49,20 @@ switch (args.command) {
 
     default:
         help();
+}
+
+async function getDuration(args: Record<string, any>): Promise<void> {
+    if (!args.input) return help();
+
+    const wxVoice = new WxVoice();
+    wxVoice.on('error', (err) => console.log(cmdName + cmdError + err));
+
+    try {
+        const seconds = await wxVoice.duration(args.input);
+        console.log(cmdName + 'duration: ' + seconds.toFixed(3) + 's');
+    } catch {
+        console.log(cmdName + cmdError + 'duration failed');
+    }
 }
 
 async function convert(type: string, args: Record<string, any>): Promise<void> {
@@ -106,6 +124,7 @@ function help(): void {
     console.log('Command:');
     console.log('  decode    decode to general audio format');
     console.log('  encode    encode from general audio format');
+    console.log('  duration  get audio file duration in seconds');
     console.log('  compile   compile wx-voice library');
     console.log('  clean     remove compiled library\n');
     console.log('Options:');
