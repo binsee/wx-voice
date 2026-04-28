@@ -75,3 +75,7 @@ typings/
 dist/
 tmp/
 .claude/
+AGENTS.md
+CLAUDE.md
+.worktree/
+docs/
