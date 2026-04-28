@@ -30,9 +30,10 @@ jobs:
             exe_suffix: ''
 
           - platform: darwin-x64
-            runner: macos-13
+            runner: macos-latest
             cross: false
             exe_suffix: ''
+            arch_prefix: 'arch -x86_64'
 
           - platform: darwin-arm64
             runner: macos-latest
@@ -65,7 +66,7 @@ jobs:
           if [ "${{ matrix.cross }}" = "true" ]; then
             make -C silk CC=${{ matrix.cross_cc }} CXX=${{ matrix.cross_cxx }} AR=${{ matrix.cross_ar }} RANLIB=${{ matrix.cross_ranlib }}
           else
-            make -C silk
+            ${{ matrix.arch_prefix || '' }} make -C silk
           fi
 
       - name: Compile Silk SDK (Windows)
