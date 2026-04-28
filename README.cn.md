@@ -161,7 +161,8 @@ voice.duration('input.silk').then((s) => console.log(s + 's'))
 ```bash
 git clone https://github.com/binsee/wx-voice.git
 cd wx-voice
-make -C silk
+npm install
+npm run build:silk
 ```
 
 库会自动检测并使用本地编译的 `silk/encoder` 和 `silk/decoder` 二进制文件。

@@ -161,7 +161,8 @@ If your platform is not in the supported list, you can build the Silk SDK locall
 ```bash
 git clone https://github.com/binsee/wx-voice.git
 cd wx-voice
-make -C silk
+npm install
+npm run build:silk
 ```
 
 The library will automatically detect and use the locally compiled binaries at `silk/encoder` and `silk/decoder`.
