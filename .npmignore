@@ -1,21 +1,19 @@
-# Test
-test/
-!silk/test/
-
-# Silk Binaries
-silk/decoder
+# Silk C source — binaries come from platform packages
+silk/src/
+silk/interface/
+silk/doc/
+silk/test/
+silk/Makefile
+silk/*.o
+silk/*.a
 silk/encoder
-silk/libSKP_SILK_SDK.a
-silk/src/*.o
-silk/test/*.o
+silk/decoder
 
-# Default
-.DS_Store
-Thumbs.db
-
-.npm
-node_modules/
-src/
-tsconfig.json
+# Dev files
+npm/
+scripts/
+.github/
+tests/
 docs/
-tmp/
+src/
+*.map

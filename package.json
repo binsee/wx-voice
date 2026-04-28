@@ -18,7 +18,7 @@
   ],
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "homepage": "https://github.com/Ang-YC/wx-voice",
+  "homepage": "https://github.com/binsee/wx-voice",
   "license": "MIT",
   "author": "AngYC <me@angyc.com> (https://angyc.com/)",
   "bin": {
@@ -26,12 +26,13 @@
   },
   "scripts": {
     "build": "tsc",
+    "build:silk": "make -C silk",
     "prepare": "tsc",
     "test": "jest --runInBand"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Ang-YC/wx-voice.git"
+    "url": "https://github.com/binsee/wx-voice.git"
   },
   "dependencies": {
     "@ffmpeg-installer/ffmpeg": "1.1.0",
