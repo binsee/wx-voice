@@ -74,7 +74,7 @@ jobs:
         run: |
           choco install mingw -y
           export PATH="/c/ProgramData/chocolatey/lib/mingw/tools/install/mingw64/bin:$PATH"
-          make -C silk CC=gcc CXX=g++ AR=ar RANLIB=ranlib EXESUFFIX=.exe lib encoder.exe decoder.exe
+          make -C silk CC=gcc CXX=g++ AR=ar RANLIB=ranlib lib encoder decoder
 
       - name: Copy binaries to platform package dir
         shell: bash
@@ -93,7 +93,13 @@ jobs:
         run: node scripts/sync-version.js
 
       - name: Publish platform package
-        run: npm publish npm/wx-voice-silk-${{ matrix.platform }}/ --access public
+        run: |
+          PKG_VERSION=$(node -p "require('./npm/wx-voice-silk-${{ matrix.platform }}/package.json').version")
+          if npm view @binsee/wx-voice-silk-${{ matrix.platform }}@${PKG_VERSION} version 2>/dev/null; then
+            echo "Version ${PKG_VERSION} already published, skipping"
+          else
+            npm publish npm/wx-voice-silk-${{ matrix.platform }}/ --access public
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
