@@ -341,7 +341,7 @@ export class WxVoice extends EventEmitter {
 
     private _getSilkSDK(type: string): string {
         const platform  = `${process.platform}-${process.arch}`;
-        const pkgName   = `wx-voice-silk-${platform}`;
+        const pkgName   = `@binsee/wx-voice-silk-${platform}`;
         const exeSuffix = process.platform === 'win32' ? '.exe' : '';
         try {
             const pkgDir = path.dirname(require.resolve(`${pkgName}/package.json`));

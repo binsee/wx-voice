@@ -1,5 +1,5 @@
 {
-  "name": "wx-voice-silk-linux-x64",
+  "name": "@binsee/wx-voice-silk-linux-x64",
   "version": "0.2.1",
   "description": "Silk SDK binaries for wx-voice (linux x64)",
   "os": [

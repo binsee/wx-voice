@@ -24,7 +24,7 @@ for (const platform of platforms) {
 
 if (!rootPkg.optionalDependencies) rootPkg.optionalDependencies = {};
 for (const platform of platforms) {
-  rootPkg.optionalDependencies[`wx-voice-silk-${platform}`] = version;
+  rootPkg.optionalDependencies[`@binsee/wx-voice-silk-${platform}`] = version;
 }
 fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify(rootPkg, null, 2) + '\n');
 console.log(`Updated root optionalDependencies → ${version}`);
