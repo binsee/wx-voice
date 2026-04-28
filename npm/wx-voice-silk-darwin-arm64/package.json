@@ -2,8 +2,15 @@
   "name": "wx-voice-silk-darwin-arm64",
   "version": "0.2.1",
   "description": "Silk SDK binaries for wx-voice (darwin arm64)",
-  "os": ["darwin"],
-  "cpu": ["arm64"],
-  "files": ["encoder", "decoder"],
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "arm64"
+  ],
+  "files": [
+    "encoder",
+    "decoder"
+  ],
   "license": "MIT"
 }
