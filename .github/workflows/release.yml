@@ -23,9 +23,10 @@ jobs:
             runner: ubuntu-latest
             cross: true
             cross_cc: aarch64-linux-gnu-gcc
+            cross_cxx: aarch64-linux-gnu-g++
             cross_ar: aarch64-linux-gnu-ar
             cross_ranlib: aarch64-linux-gnu-ranlib
-            cross_pkg: gcc-aarch64-linux-gnu
+            cross_pkg: gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
             exe_suffix: ''
 
           - platform: darwin-x64
@@ -62,7 +63,7 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           if [ "${{ matrix.cross }}" = "true" ]; then
-            make -C silk CC=${{ matrix.cross_cc }} AR=${{ matrix.cross_ar }} RANLIB=${{ matrix.cross_ranlib }}
+            make -C silk CC=${{ matrix.cross_cc }} CXX=${{ matrix.cross_cxx }} AR=${{ matrix.cross_ar }} RANLIB=${{ matrix.cross_ranlib }}
           else
             make -C silk
           fi
@@ -73,7 +74,7 @@ jobs:
         run: |
           choco install mingw -y
           export PATH="/c/ProgramData/chocolatey/lib/mingw/tools/install/mingw64/bin:$PATH"
-          make -C silk CC=gcc CXX=g++ AR=ar RANLIB=ranlib EXESUFFIX=.exe
+          make -C silk CC=gcc CXX=g++ AR=ar RANLIB=ranlib EXESUFFIX=.exe lib encoder.exe decoder.exe
 
       - name: Copy binaries to platform package dir
         shell: bash
