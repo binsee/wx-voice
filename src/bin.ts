@@ -2,7 +2,6 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { exec } from 'child_process';
 import cmdArgs = require('command-line-args');
 import { Spinner } from 'cli-spinner';
 import { WxVoice, ConvertOptions } from './index';
@@ -27,24 +26,6 @@ switch (args.command) {
     case 'decode':
     case 'encode':
         convert(args.command, args);
-        break;
-
-    case 'duration':
-        getDuration(args);
-        break;
-
-    case 'compile':
-        execCmd(args.command + '-1', 'make -C ' + binSdk, () => {
-            if (!fs.existsSync(sdk)) return;
-            execCmd(args.command + '-2', 'make -C ' + sdk);
-        });
-        break;
-
-    case 'clean':
-        execCmd(args.command + '-1', 'make -C ' + binSdk + ' clean', () => {
-            if (!fs.existsSync(sdk)) return;
-            execCmd(args.command + '-2', 'make -C ' + sdk + ' clean');
-        });
         break;
 
     default:
@@ -95,22 +76,6 @@ async function convert(type: string, args: Record<string, any>): Promise<void> {
     }
 }
 
-function execCmd(type: string, cmd: string, cb?: () => void): void {
-    const spinner = loading(type);
-    spinner.start();
-    exec(cmd, (_e, _out, err) => {
-        setTimeout(() => {
-            spinner.stop();
-            console.log();
-            if (err && err.length > 0 && !err.startsWith('ar')) {
-                console.log(cmdName + cmdError + err);
-            } else {
-                console.log(cmdName + type + ' success');
-            }
-            if (cb) cb();
-        }, 100);
-    });
-}
 
 function loading(type: string): Spinner {
     const spinner = new Spinner(cmdName + '%s Running command: ' + type);
@@ -119,14 +84,13 @@ function loading(type: string): Spinner {
 }
 
 function help(): void {
-    console.log('| wxVoice by AngYC | v0.2.1 |');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const version = require('../package.json').version as string;
+    console.log(`| wxVoice by binsee | v${version} |`);
     console.log('Usage: wx-voice <command> <options>\n');
     console.log('Command:');
     console.log('  decode    decode to general audio format');
-    console.log('  encode    encode from general audio format');
-    console.log('  duration  get audio file duration in seconds');
-    console.log('  compile   compile wx-voice library');
-    console.log('  clean     remove compiled library\n');
+    console.log('  encode    encode from general audio format\n');
     console.log('Options:');
     console.log('  -i <input>    input file path');
     console.log('  -o <output>   output file path');
