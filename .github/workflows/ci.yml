@@ -20,6 +20,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Compile Silk SDK
+        run: make -C silk
+
       - name: Build TypeScript
         run: npm run build
 
