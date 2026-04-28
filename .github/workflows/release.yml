@@ -93,6 +93,7 @@ jobs:
         run: node scripts/sync-version.js
 
       - name: Publish platform package
+        shell: bash
         run: |
           PKG_VERSION=$(node -p "require('./npm/wx-voice-silk-${{ matrix.platform }}/package.json').version")
           if npm view @binsee/wx-voice-silk-${{ matrix.platform }}@${PKG_VERSION} version 2>/dev/null; then
