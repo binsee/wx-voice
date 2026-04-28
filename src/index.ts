@@ -278,7 +278,12 @@ export class WxVoice extends EventEmitter {
 
     private _parseSilkDuration(filePath: string): number {
         const CHUNK_SIZE = 256 * 1024;
-        const fd = fs.openSync(filePath, 'r');
+        let fd: number;
+        try {
+            fd = fs.openSync(filePath, 'r');
+        } catch {
+            return 0;
+        }
         try {
             const fileSize = fs.fstatSync(fd).size;
             if (fileSize < 2) return 0;
