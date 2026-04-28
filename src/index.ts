@@ -256,12 +256,26 @@ export class WxVoice extends EventEmitter {
         const silkDecoder = this._getSilkSDK('decoder');
         const silkEncoder = this._getSilkSDK('encoder');
         if (!fs.existsSync(silkDecoder) || !fs.existsSync(silkEncoder)) {
-            throw new Error('Silk SDK not found, make sure you compiled using command: wx-voice compile');
+            const platform = `${process.platform}-${process.arch}`;
+            throw new Error(
+                `Silk SDK not found for platform ${platform}. ` +
+                `If your platform is not in the supported list, ` +
+                `clone the repository and run: make -C silk`
+            );
         }
     }
 
     private _getSilkSDK(type: string): string {
-        return path.resolve(__dirname, '..', 'silk', type);
+        const platform  = `${process.platform}-${process.arch}`;
+        const pkgName   = `wx-voice-silk-${platform}`;
+        const exeSuffix = process.platform === 'win32' ? '.exe' : '';
+        try {
+            const pkgDir = path.dirname(require.resolve(`${pkgName}/package.json`));
+            const bin    = path.join(pkgDir, type + exeSuffix);
+            if (fs.existsSync(bin)) return bin;
+        } catch {}
+        // fallback: locally compiled binary (contributors / unsupported platforms)
+        return path.resolve(__dirname, '..', 'silk', type + exeSuffix);
     }
 
     private _getTempFile(fileName: string, noPrefix = false): string {
