@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-import * as fs from 'fs';
 import * as path from 'path';
 import cmdArgs = require('command-line-args');
 import { Spinner } from 'cli-spinner';
@@ -16,9 +15,6 @@ const args = cmdArgs([
     { name: 'channels',  type: Number }
 ]) as Record<string, any>;
 
-const binSdk = path.resolve(__dirname, '..', 'silk');
-const sdk    = path.resolve(process.cwd(), 'node_modules', 'wx-voice', 'silk');
-
 const cmdName  = '[wx-voice]  ';
 const cmdError = '\x1b[41m\x1b[37mERROR\x1b[0m  ';
 
@@ -26,6 +22,10 @@ switch (args.command) {
     case 'decode':
     case 'encode':
         convert(args.command, args);
+        break;
+
+    case 'duration':
+        getDuration(args);
         break;
 
     default:
@@ -90,7 +90,8 @@ function help(): void {
     console.log('Usage: wx-voice <command> <options>\n');
     console.log('Command:');
     console.log('  decode    decode to general audio format');
-    console.log('  encode    encode from general audio format\n');
+    console.log('  encode    encode from general audio format');
+    console.log('  duration  get duration of audio file\n');
     console.log('Options:');
     console.log('  -i <input>    input file path');
     console.log('  -o <output>   output file path');
