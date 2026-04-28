@@ -1,0 +1,9 @@
+{
+  "name": "wx-voice-silk-linux-arm64",
+  "version": "0.2.1",
+  "description": "Silk SDK binaries for wx-voice (linux arm64)",
+  "os": ["linux"],
+  "cpu": ["arm64"],
+  "files": ["encoder", "decoder"],
+  "license": "MIT"
+}

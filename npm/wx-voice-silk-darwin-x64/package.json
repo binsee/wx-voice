@@ -1,0 +1,9 @@
+{
+  "name": "wx-voice-silk-darwin-x64",
+  "version": "0.2.1",
+  "description": "Silk SDK binaries for wx-voice (darwin x64)",
+  "os": ["darwin"],
+  "cpu": ["x64"],
+  "files": ["encoder", "decoder"],
+  "license": "MIT"
+}

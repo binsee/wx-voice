@@ -1,0 +1,9 @@
+{
+  "name": "wx-voice-silk-win32-arm64",
+  "version": "0.2.1",
+  "description": "Silk SDK binaries for wx-voice (win32 arm64)",
+  "os": ["win32"],
+  "cpu": ["arm64"],
+  "files": ["encoder.exe", "decoder.exe"],
+  "license": "MIT"
+}
